@@ -1,0 +1,14 @@
+PARA EL UPDATE, ESTADOS PERMITIDOS:
+
+PENDING → APPROVED | REJECTED  :  Sólo se puede cambiar el estado si esta PENDING. (Estadis válidos: PENDING, APPROVED, REJECTED)
+Constraint en BD que lo verifica
+
+Tabla de Auditoria -> Registrar quién, cuándo y qué estado cambió una solicitud.
+
+Historial de cambios de una solicitud
+-Arquitectura-
+        Route → Controller → Service → Model → DB
+
+Caso de solicitud
+1. Solicitud TI -> Aproved
+2. Otros -> Rejected
