@@ -1,23 +1,31 @@
 const express = require('express');
 const router = express.Router();
-const RequestController = require('../controllers/requests.controller');
-const { requireAdmin } = require('../middlewares/role.middleware');
 
-router.post('/', RequestController.create);
-router.get('/', RequestController.getAll);
-router.put('/:id/status', requireAdmin, RequestController.updateStatus);
-router.get('/:id/history', RequestController.getHistory);
-router.post('/:id/auto-process', RequestController.autoProcess);
+const RequestController = require('../controllers/requests.controller.js'); 
+const verifyToken = require('../middlewares/auth.middleware');
+const checkRole = require('../middlewares/role.middleware');
+
+// Todo lo que esté debajo de esta línea requiere un Token JWT válido.
+router.use(verifyToken);
+
+// ** RUTAS GENERALES ** (Cualquier usuario logueado)
+// Crear nueva solicitud
+router.post('/', RequestController.createRequest || RequestController.create); 
+
+// Listar solicitudes
+router.get('/', RequestController.getRequests || RequestController.getAll);
+
+// Ver historial de una solicitud
+router.get('/:id/history', RequestController.getRequestHistory || RequestController.getHistory);
 
 
-router.get('/:id/history', async (req, res) => {
-  try {
-    const history = await RequestHistory.findByRequestId(req.params.id);
-    res.json(history);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// ** RUTAS ADMIN **
 
+// Aprobar o Rechazar solicitud
+router.put('/:id/status', checkRole('ADMIN'), RequestController.updateStatus);
+
+
+// ** RUTAS DE AUTOMATIZACIÓN **
+router.post('/:id/auto-process', RequestController.processRequestAutomatic || RequestController.autoProcess);
 
 module.exports = router;

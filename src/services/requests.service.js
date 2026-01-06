@@ -10,8 +10,8 @@ const RequestService = {
     return await RequestModel.create(data);
   },
 
-  getAllRequests: async () => {
-    return await RequestModel.findAll();
+  getAllRequests: async (page, limit) => {
+    return await RequestModel.findAll(page, limit);
   },
 
   updateRequestStatus: async (id, newStatus, changedBy = 'system') => {

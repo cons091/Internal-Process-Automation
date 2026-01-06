@@ -1,15 +1,18 @@
-const requireAdmin = (req, res, next) => {
-  const role = req.headers['x-user-role'];
+const checkRole = (requiredRole) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(500).json({ message: 'Error de servidor: Auth middleware no ejecutado antes de Role middleware' });
+    }
 
-  if (!role) {
-    return res.status(401).json({ error: 'User role is required' });
-  }
+    // Comparamos el rol del token con el requerido
+    if (req.user.role !== requiredRole) {
+      return res.status(403).json({ 
+        message: `Acceso denegado: Se requiere rol ${requiredRole}` 
+      });
+    }
 
-  if (role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Admin privileges required' });
-  }
-
-  next();
+    next();
+  };
 };
 
-module.exports = { requireAdmin };
+module.exports = checkRole;
