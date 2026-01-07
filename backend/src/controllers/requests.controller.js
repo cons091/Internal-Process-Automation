@@ -20,34 +20,34 @@ const RequestController = {
       res.status(400).json({ error: error.message });
     }
   },
-
   getAll: async (req, res) => {
-    try {
-      // Leemos los parámetros de la URL
-      let { page, limit } = req.query;
+      try {
+        let { page, limit } = req.query;
+        page = parseInt(page) || 1;
+        limit = parseInt(limit) || 10;
 
-      // Convertimos a números y asignamos defaults si no vienen
-      page = parseInt(page) || 1;
-      limit = parseInt(limit) || 10;
+        const { id, role } = req.user; 
 
-      // Llamamos al servicio
-      const result = await RequestService.getAllRequests(page, limit);
+        const userIdFilter = role === 'ADMIN' ? null : id;
 
-      res.json({
-        success: true,
-        data: result.data,
-        pagination: {
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-          totalPages: Math.ceil(result.total / result.limit)
-        }
-      });
+        const result = await RequestService.getAllRequests(page, limit, userIdFilter);
 
-    } catch (error) {
-      res.status(500).json({ error: 'Internal server error', details: error.message });
-    }
-  },
+        res.json({
+          success: true,
+          data: result.data,
+          pagination: {
+            total: result.total,
+            page: page,
+            limit: limit,
+            totalPages: Math.ceil(result.total / limit)
+          }
+        });
+
+      } catch (error) {
+        console.error(error); // Log para ver errores en consola
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+      }
+    },
 
   updateStatus: async (req, res) => {
     try {

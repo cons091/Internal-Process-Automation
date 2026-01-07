@@ -10,8 +10,8 @@ const RequestService = {
     return await RequestModel.create(data);
   },
 
-  getAllRequests: async (page, limit) => {
-    return await RequestModel.findAll(page, limit);
+  getAllRequests: async (page, limit, userId = null) => {
+    return await RequestModel.findAll(page, limit, userId);
   },
 
   updateRequestStatus: async (id, newStatus, changedBy = 'system') => {
@@ -31,7 +31,6 @@ const RequestService = {
       throw new Error('Only pending requests can be updated');
     }
 
-    // 1️⃣ Guardar auditoría
     await RequestHistoryModel.create(
       id,
       request.status,
