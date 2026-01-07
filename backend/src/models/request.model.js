@@ -57,15 +57,43 @@ const RequestModel = {
     };
   },
   
-  updateStatus: async (id, status) => {
-    const query = `
-      UPDATE requests
-      SET status = $1
-      WHERE id = $2
-      RETURNING *
-    `;
-    const { rows } = await pool.query(query, [status, id]);
-    return rows[0];
+  updateStatus: async (id, status, changedBy) => {
+    const client = await pool.connect(); // Usamos cliente para transacción
+    
+    try {
+      await client.query('BEGIN'); // Iniciamos transacción para seguridad
+
+      // 1. Obtener el estado ANTERIOR antes de cambiarlo
+      const oldReqRes = await client.query('SELECT status FROM requests WHERE id = $1', [id]);
+      const previousStatus = oldReqRes.rows[0]?.status;
+
+      // 2. Actualizar la solicitud
+      const updateQuery = `
+        UPDATE requests
+        SET status = $1
+        WHERE id = $2
+        RETURNING *
+      `;
+      const { rows } = await client.query(updateQuery, [status, id]);
+      const updatedRequest = rows[0];
+
+      // 3. Insertar en el historial (request_status_history)
+      // Asumo que 'changed_at' tiene DEFAULT NOW() en tu BD, si no, añádelo.
+      const historyQuery = `
+        INSERT INTO request_status_history (request_id, previous_status, new_status, changed_by, changed_at)
+        VALUES ($1, $2, $3, $4, NOW())
+      `;
+      await client.query(historyQuery, [id, previousStatus, status, changedBy]);
+
+      await client.query('COMMIT'); // Guardamos cambios
+      return updatedRequest;
+
+    } catch (error) {
+      await client.query('ROLLBACK'); // Si falla, deshacemos todo
+      throw error;
+    } finally {
+      client.release(); // Liberamos el cliente
+    }
   },
 
   findById: async (id) => {
@@ -77,6 +105,23 @@ const RequestModel = {
     const { rows } = await pool.query(query, [id]);
     return rows[0];
   },
+
+getHistory: async (requestId) => {
+    const query = `
+      SELECT 
+        h.id,
+        h.new_status as status,
+        h.previous_status,
+        u.name as changed_by_name,
+        u.role as changed_by_role
+      FROM request_status_history h
+      JOIN users u ON h.changed_by = u.id
+      WHERE h.request_id = $1
+      ORDER BY h.changed_at DESC
+    `;
+    const { rows } = await pool.query(query, [requestId]);
+    return rows;
+  }
 };
 
 module.exports = RequestModel;

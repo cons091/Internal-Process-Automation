@@ -18,5 +18,11 @@ export const requestService = {
   updateStatus: async (id, status) => {
     const response = await api.put(`/requests/${id}/status`, { status });
     return response.data;
+  },
+
+  // Obtener historial de una solicitud
+  getHistory: async (id) => {
+    const response = await api.get(`/requests/${id}/history`);
+    return response.data;
   }
 };

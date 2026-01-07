@@ -4,11 +4,11 @@ import ProtectedRoute from './ProtectedRoute';
 import LoginPage from '../pages/Auth/LoginPage';
 import RegisterPage from '../pages/Auth/RegisterPage';
 import UserDashboard from '../pages/User/UserDashboard';
+import CreateRequest from '../pages/User/CreateRequest';
+import AdminDashboard from '../pages/Admin/AdminDashboard';
 
 // --- PLACEHOLDERS (Componentes temporales para evitar que la app se rompa) ---
 // Una vez crees los archivos reales en /pages, borra esto y haz los imports arriba.
-const AdminDashboard = () => <div className="p-10"><h1>Panel de Administrador (Pendiente)</h1></div>;
-const CreateRequest = () => <div className="p-10"><h1>Nueva Solicitud (Pendiente)</h1></div>;
 const NotFound = () => <div className="p-10"><h1>404 - Página no encontrada</h1></div>;
 // --------------------------------------------------------------------------
 
