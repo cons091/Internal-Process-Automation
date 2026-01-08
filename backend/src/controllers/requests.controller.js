@@ -2,6 +2,8 @@ const RequestService = require('../services/requests.service');
 const RequestModel = require('../models/request.model'); // <--- ¡ESTA LÍNEA FALTABA!
 const pool = require('../config/db') || require('../db');
 
+const { REQUEST_TYPES, STATUS } = require('../config/constants');
+
 const RequestController = {
   create: async (req, res) => {
     try {
@@ -126,7 +128,6 @@ const RequestController = {
         return res.status(400).json({ message: 'La solicitud ya fue procesada anteriormente.' });
       }
 
-      // Cargar configuración
       const configResult = await client.query('SELECT key, value FROM system_config');
       const config = configResult.rows.reduce((acc, row) => {
         acc[row.key] = row.value;
@@ -136,32 +137,43 @@ const RequestController = {
       let newStatus = 'PENDING';
       let reason = 'No cumplió criterios automáticos para aprobación/rechazo directo.';
       const amount = parseFloat(request.amount);
-      const type = request.type.toUpperCase(); // Normalizamos a mayúsculas por seguridad
+      const type = request.type.toUpperCase();
 
-      // --- REGLAS DE TIEMPO (Vacaciones, Licencias) ---
-      if (['VACACIONES', 'LICENCIA MEDICA', 'LICENCIA'].includes(type)) {
+      // 2. AQUI USAMOS LAS CONSTANTES EN LUGAR DE TEXTO
+      // Definimos los grupos usando las constantes importadas
+      const timeBasedTypes = [
+        REQUEST_TYPES.VACATION, 
+        REQUEST_TYPES.SICK_LEAVE, 
+        REQUEST_TYPES.LICENSE
+      ];
+
+      const moneyBasedTypes = [
+        REQUEST_TYPES.EXPENSES, 
+        REQUEST_TYPES.REFUND, 
+        REQUEST_TYPES.DIEM
+      ];
+
+      // --- LÓGICA CON CONSTANTES ---
+      if (timeBasedTypes.includes(type)) {
           const maxDays = parseFloat(config['AUTO_APPROVE_DAYS_LIMIT'] || 0);
           const rejectDays = parseFloat(config['AUTO_REJECT_MAX_DAYS'] || 999);
           
           if (amount <= maxDays) {
-              newStatus = 'APPROVED';
+              newStatus = 'APPROVED'; // Podrías usar STATUS.APPROVED aquí también
               reason = `Auto-Aprobado: ${amount} días es menor o igual al límite de ${maxDays}.`;
           } else if (amount > rejectDays) {
               newStatus = 'REJECTED';
               reason = `Auto-Rechazado: ${amount} días excede el límite de seguridad de ${rejectDays}.`;
           }
       } 
-      // --- REGLAS DE DINERO (Gastos, Reembolsos) ---
-      else if (['GASTOS', 'REEMBOLSO DE GASTOS', 'VIATICOS'].includes(type)) {
+      else if (moneyBasedTypes.includes(type)) {
           const maxMoney = parseFloat(config['AUTO_APPROVE_MONEY_LIMIT'] || 0);
-          // Leemos el nuevo límite de rechazo. Si no existe, usamos un número gigante por defecto.
           const rejectMoney = parseFloat(config['AUTO_REJECT_MONEY_LIMIT'] || 999999999);
           
           if (amount <= maxMoney) {
               newStatus = 'APPROVED';
               reason = `Auto-Aprobado: Monto $${amount} es menor o igual al límite de $${maxMoney}.`;
           } else if (amount > rejectMoney) {
-              // ¡AQUÍ ESTÁ LA LÓGICA QUE FALTABA!
               newStatus = 'REJECTED';
               reason = `Auto-Rechazado: Monto $${amount} excede el límite máximo permitido de $${rejectMoney}.`;
           }
