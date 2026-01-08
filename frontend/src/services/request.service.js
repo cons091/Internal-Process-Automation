@@ -24,5 +24,20 @@ export const requestService = {
   getHistory: async (id) => {
     const response = await api.get(`/requests/${id}/history`);
     return response.data;
+  },
+  autoProcess: async (id) => {
+    // Llama a la ruta POST /api/requests/:id/auto-process
+    const response = await api.post(`/requests/${id}/auto-process`);
+    return response.data;
+  },
+
+  getSystemConfig: async () => {
+    const response = await api.get('/requests/system/config');
+    return response.data;
+  },
+
+  updateSystemConfig: async (key, newValue) => {
+    const response = await api.put(`/requests/system/config/${key}`, { value: newValue });
+    return response.data;
   }
 };

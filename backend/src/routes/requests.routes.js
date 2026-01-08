@@ -18,7 +18,6 @@ router.get('/', RequestController.getRequests || RequestController.getAll);
 // Ver historial de una solicitud
 router.get('/:id/history', RequestController.getRequestHistory || RequestController.getHistory);
 
-
 // ** RUTAS ADMIN **
 
 // Aprobar o Rechazar solicitud
@@ -29,3 +28,10 @@ router.put('/:id/status', checkRole('ADMIN'), RequestController.updateStatus);
 router.post('/:id/auto-process', RequestController.processRequestAutomatic || RequestController.autoProcess);
 
 module.exports = router;
+
+// ** RUTAS DE CONFIGURACIÓN DEL SISTEMA **
+// GET: Para mostrar las reglas en el modal
+router.get('/system/config', checkRole('ADMIN'), RequestController.getSystemConfig);
+
+// PUT: Para guardar cambios en una regla específica
+router.put('/system/config/:key', checkRole('ADMIN'), RequestController.updateSystemConfig);

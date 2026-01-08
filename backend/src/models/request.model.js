@@ -57,17 +57,17 @@ const RequestModel = {
     };
   },
   
-  updateStatus: async (id, status, changedBy) => {
-    const client = await pool.connect(); // Usamos cliente para transacción
+  updateStatus: async (id, status, changedBy, reason = null) => {
+    const client = await pool.connect();
     
     try {
-      await client.query('BEGIN'); // Iniciamos transacción para seguridad
+      await client.query('BEGIN');
 
-      // 1. Obtener el estado ANTERIOR antes de cambiarlo
+      // 1. Obtener estado anterior
       const oldReqRes = await client.query('SELECT status FROM requests WHERE id = $1', [id]);
       const previousStatus = oldReqRes.rows[0]?.status;
 
-      // 2. Actualizar la solicitud
+      // 2. Actualizar solicitud
       const updateQuery = `
         UPDATE requests
         SET status = $1
@@ -77,22 +77,24 @@ const RequestModel = {
       const { rows } = await client.query(updateQuery, [status, id]);
       const updatedRequest = rows[0];
 
-      // 3. Insertar en el historial (request_status_history)
-      // Asumo que 'changed_at' tiene DEFAULT NOW() en tu BD, si no, añádelo.
+      // 3. Insertar historial con REASON y CHANGED_AT explícito
       const historyQuery = `
-        INSERT INTO request_status_history (request_id, previous_status, new_status, changed_by, changed_at)
-        VALUES ($1, $2, $3, $4, NOW())
+        INSERT INTO request_status_history 
+        (request_id, previous_status, new_status, changed_by, changed_at, reason)
+        VALUES ($1, $2, $3, $4, NOW(), $5)
       `;
-      await client.query(historyQuery, [id, previousStatus, status, changedBy]);
+      // Si reason es undefined o null, se guarda como null en DB (o string vacío si prefieres)
+      const reasonToSave = reason || 'Actualización manual';
+      
+      await client.query(historyQuery, [id, previousStatus, status, changedBy, reasonToSave]);
 
-      await client.query('COMMIT'); // Guardamos cambios
+      await client.query('COMMIT');
       return updatedRequest;
-
     } catch (error) {
-      await client.query('ROLLBACK'); // Si falla, deshacemos todo
+      await client.query('ROLLBACK');
       throw error;
     } finally {
-      client.release(); // Liberamos el cliente
+      client.release();
     }
   },
 
@@ -112,10 +114,12 @@ getHistory: async (requestId) => {
         h.id,
         h.new_status as status,
         h.previous_status,
+        h.reason,
+        h.changed_at,
         u.name as changed_by_name,
         u.role as changed_by_role
       FROM request_status_history h
-      JOIN users u ON h.changed_by = u.id
+      LEFT JOIN users u ON h.changed_by = u.id
       WHERE h.request_id = $1
       ORDER BY h.changed_at DESC
     `;
