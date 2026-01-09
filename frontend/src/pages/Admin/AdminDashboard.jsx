@@ -10,12 +10,26 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
   const [showConfig, setShowConfig] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
 
-  // Cargar solicitudes
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const limit = 10;
+
   const fetchRequests = async () => {
+    setLoading(true);
     try {
-      const response = await requestService.getAll();
-      setRequests(response.data);
+      const response = await requestService.getAll(page, limit, searchTerm, statusFilter, typeFilter);
+      
+      if (response.pagination) {
+        setRequests(response.data);
+        setTotalPages(response.pagination.totalPages);
+      } else {
+        setRequests(response.data || []); 
+      }
     } catch (error) {
       console.error('Error cargando solicitudes:', error);
     } finally {
@@ -24,12 +38,13 @@ const AdminDashboard = () => {
   };
 
   useEffect(() => {
-    fetchRequests();
-  }, []);
+    const delayDebounce = setTimeout(() => {
+      fetchRequests();
+    }, 500);
+    return () => clearTimeout(delayDebounce);
+  }, [page, searchTerm, statusFilter, typeFilter]);
 
-  // Aprobar / Rechazar
   const handleStatusChange = async (id, newStatus) => {
-    // UI optimista
     setRequests(current =>
       current.map(req =>
         req.id === id ? { ...req, status: newStatus } : req
@@ -44,21 +59,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleAutoProcess = async (id) => {
+const handleAutoProcess = async (id) => {
     setProcessingId(id);
     try {
       const result = await requestService.autoProcess(id);
       
-      // Lógica de visualización del resultado
+      if (result.sentTo) {
+        console.log(`📧 CONFIRMACIÓN DEL SERVER: Correo enviado a ${result.sentTo}`);
+      } else {
+        console.warn("⚠️ El servidor dice que el usuario NO tiene email configurado.");
+      }
       if (result.status === 'PENDING') {
-         // El sistema analizó pero no tomó acción
          alert(`Resultado Automático: SIN CAMBIOS.\nMotivo: ${result.message}`);
       } else {
-         // El sistema tomó una decisión (Aprobó o Rechazó)
          const statusText = result.status === 'APPROVED' ? 'APROBADA' : 'RECHAZADA';
-         alert(`Resultado Automático: La solicitud fue ${statusText} por el sistema.\nMotivo: ${result.message}`);
+         alert(`Resultado Automático: La solicitud fue ${statusText}.\nMotivo: ${result.message}`);
          
-         // Actualizar estado localmente
          setRequests(prevRequests => 
           prevRequests.map(req => 
             req.id === id ? { ...req, status: result.status } : req
@@ -66,7 +82,6 @@ const AdminDashboard = () => {
         );
       }
       
-      // Siempre refrescar la tabla para traer datos frescos de la DB
       fetchRequests();
 
     } catch (error) {
@@ -121,7 +136,47 @@ const AdminDashboard = () => {
             </button>
           </div>
         </div>
-
+        {/* BARRA DE FILTROS ADMIN */}
+        <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Buscar (Usuario/Email)</label>
+            <input
+              type="text"
+              placeholder="Buscar empleado..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-2 border"
+            />
+          </div>
+        {/* FILTRO POR TIPO */}
+          <div className="w-40">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-2 border"
+            >
+              <option value="">Todos</option>
+              <option value="VACACIONES">Vacaciones</option>
+              <option value="LICENCIA">Licencia</option>
+              <option value="GASTOS">Gastos</option>
+              <option value="GENERAL">General</option>
+            </select>
+          </div>
+          <div className="w-40">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Estado</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-purple-500 focus:ring-purple-500 sm:text-sm p-2 border"
+            >
+              <option value="">Todos</option>
+              <option value="PENDING">Pendientes</option>
+              <option value="APPROVED">Aprobadas</option>
+              <option value="REJECTED">Rechazadas</option>
+            </select>
+          </div>
+        </div>
         {/* TABLA */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="w-full text-left border-collapse">
@@ -208,9 +263,10 @@ const AdminDashboard = () => {
                                             ? 'bg-gray-400 cursor-not-allowed' 
                                             : 'bg-purple-600 hover:bg-purple-700'
                                           }`}
+                                          
                             >
                               {processingId === req.id ? (
-                                /* ESTADO CARGANDO: Spinner */
+                                /* ESTADO CARGANDO */
                                 <>
                                   <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -218,7 +274,7 @@ const AdminDashboard = () => {
                                   </svg>
                                 </>
                               ) : (
-                                /* ESTADO NORMAL: Rayo + Texto */
+                                /* ESTADO NORMAL */
                                 <>
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -269,6 +325,38 @@ const AdminDashboard = () => {
             </tbody>
           </table>
          </div>
+         {/* PAGINACIÓN ADMIN */}
+          {!loading && requests.length > 0 && (
+            <div className="p-4 border-t border-gray-100 flex justify-between items-center bg-gray-50">
+              <span className="text-xs text-gray-500">
+                Página <span className="font-semibold">{page}</span> de <span className="font-semibold">{totalPages}</span>
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className={`px-3 py-1 text-xs font-medium rounded border ${
+                    page === 1
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 shadow-sm'
+                  }`}
+                >
+                  Anterior
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                  className={`px-3 py-1 text-xs font-medium rounded border ${
+                    page >= totalPages
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                      : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 shadow-sm'
+                  }`}
+                >
+                  Siguiente
+                </button>
+              </div>
+            </div>
+          )}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import api from '../api/axios';
 const authService = {
   login: async (credentials) => {
     const response = await api.post('/auth/login', credentials);
-    return response.data; // Retorna { token, user }
+    return response.data;
   },
 
   register: async (userData) => {

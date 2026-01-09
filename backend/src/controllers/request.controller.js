@@ -1,7 +1,7 @@
-const RequestService = require('../services/requests.service');
-const RequestModel = require('../models/request.model'); // <--- ¡ESTA LÍNEA FALTABA!
+const RequestService = require('../services/request.service');
+const RequestModel = require('../models/request.model');
+const EmailService = require('../services/email.service'); 
 const pool = require('../config/db') || require('../db');
-
 const { REQUEST_TYPES, STATUS } = require('../config/constants');
 
 const RequestController = {
@@ -27,15 +27,14 @@ const RequestController = {
 
   getAll: async (req, res) => {
     try {
-      let { page, limit } = req.query;
+      let { page, limit, search, status, type } = req.query;
+      
       page = parseInt(page) || 1;
       limit = parseInt(limit) || 10;
 
       const { id, role } = req.user;
-
       const userIdFilter = role === 'ADMIN' ? null : id;
-
-      const result = await RequestService.getAllRequests(page, limit, userIdFilter);
+      const result = await RequestService.getAllRequests(page, limit, userIdFilter, search, status, type);
 
       res.json({
         success: true,
@@ -57,21 +56,50 @@ const RequestController = {
   updateStatus: async (req, res) => {
     try {
       const { id } = req.params;
-      const { status } = req.body;
-      const changedBy = req.user.id; // ID del ADMIN (del Token)
+      const { status } = req.body; 
+      const changedBy = req.user.id;
 
-      // Validamos que venga el status correcto
+      console.log(`\n--- 🛠 INICIANDO CAMBIO MANUAL ---`);
+      console.log(`📝 ID Solicitud: ${id} | Nuevo Estado: ${status}`);
+
       if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
         return res.status(400).json({ error: "Estado inválido" });
       }
 
-      // Pasamos 'changedBy' al modelo
-      // AHORA SÍ FUNCIONARÁ PORQUE RequestModel YA ESTÁ IMPORTADO
-      const updated = await RequestModel.updateStatus(id, status, changedBy);
+      const requestData = await RequestModel.findById(id);
+      
+      if (!requestData) {
+        console.log("❌ Error: Solicitud no encontrada en DB");
+        return res.status(404).json({ error: "Solicitud no encontrada" });
+      }
 
+      console.log(`👤 Usuario dueño de la solicitud: ${requestData.user_name}`);
+      console.log(`📧 EMAIL ENCONTRADO: [ ${requestData.user_email} ]`);
+
+      const updated = await RequestModel.updateStatus(id, status, changedBy, "Cambio manual por Admin");
+      
+      if (status !== 'PENDING') {
+         if (requestData.user_email) {
+            console.log(`📨 Enviando correo a ${requestData.user_email}...`);
+            
+            await EmailService.sendStatusNotification(
+                requestData.user_email,
+                requestData.user_name,
+                requestData.type,
+                status,
+                "Revisión manual administrativa."
+            );
+            console.log(`✅ ¡Correo enviado exitosamente!`);
+         } else {
+            console.log(`⚠️ ALERTA: El usuario NO tiene email registrado. No se envió nada.`);
+         }
+      }
+
+      console.log(`--- FIN DEL PROCESO ---\n`);
       res.json(updated);
+
     } catch (error) {
-      console.error(error);
+      console.error("❌ ERROR CRITICO:", error);
       res.status(500).json({ error: error.message });
     }
   },
@@ -79,7 +107,6 @@ const RequestController = {
   getHistory: async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      // Validamos que sea un número válido para evitar errores de NaN
       if (isNaN(id)) {
         return res.status(400).json({ error: "ID inválido" });
       }
@@ -87,20 +114,17 @@ const RequestController = {
       const userId = req.user.id; 
       const userRole = req.user.role;
 
-      // 1. Verificar que la solicitud existe
-      const request = await RequestModel.findById(id); // Ahora pasamos un número
+      const request = await RequestModel.findById(id);
       
       if (!request) {
         return res.status(404).json({ error: "Solicitud no encontrada" });
       }
 
-      // 2. SEGURIDAD: Si no es ADMIN, verificar que sea el dueño
       if (userRole !== 'ADMIN' && request.created_by !== userId) {
         return res.status(403).json({ error: "No tienes permiso para ver este historial" });
       }
 
-      // 3. Obtener historial
-      const history = await RequestModel.getHistory(id); // Ahora pasamos un número
+      const history = await RequestModel.getHistory(id);
       res.json(history);
 
     } catch (error) {
@@ -113,16 +137,29 @@ const RequestController = {
     const { id } = req.params;
     const client = await pool.connect();
 
+    console.log(`\n--- 🤖 INICIANDO AUTO-PROCESO ID: ${id} ---`);
+
     try {
       await client.query('BEGIN');
+      const query = `
+        SELECT r.*, u.email as user_email, u.name as user_name 
+        FROM requests r
+        LEFT JOIN users u ON r.created_by = u.id
+        WHERE r.id = $1 
+        FOR UPDATE OF r
+      `;
+      
+      const requestResult = await client.query(query, [id]);
 
-      const requestResult = await client.query('SELECT * FROM requests WHERE id = $1 FOR UPDATE', [id]);
       if (requestResult.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ message: 'Solicitud no encontrada' });
       }
       
       const request = requestResult.rows[0];
+      
+      console.log(`🔎 Datos recuperados: Monto=${request.amount}, Email=${request.user_email}`);
+
       if (request.status !== 'PENDING') {
         await client.query('ROLLBACK');
         return res.status(400).json({ message: 'La solicitud ya fue procesada anteriormente.' });
@@ -139,8 +176,6 @@ const RequestController = {
       const amount = parseFloat(request.amount);
       const type = request.type.toUpperCase();
 
-      // 2. AQUI USAMOS LAS CONSTANTES EN LUGAR DE TEXTO
-      // Definimos los grupos usando las constantes importadas
       const timeBasedTypes = [
         REQUEST_TYPES.VACATION, 
         REQUEST_TYPES.SICK_LEAVE, 
@@ -153,13 +188,13 @@ const RequestController = {
         REQUEST_TYPES.DIEM
       ];
 
-      // --- LÓGICA CON CONSTANTES ---
+      // ** LÓGICA DE REGLAS **
       if (timeBasedTypes.includes(type)) {
           const maxDays = parseFloat(config['AUTO_APPROVE_DAYS_LIMIT'] || 0);
           const rejectDays = parseFloat(config['AUTO_REJECT_MAX_DAYS'] || 999);
           
           if (amount <= maxDays) {
-              newStatus = 'APPROVED'; // Podrías usar STATUS.APPROVED aquí también
+              newStatus = 'APPROVED';
               reason = `Auto-Aprobado: ${amount} días es menor o igual al límite de ${maxDays}.`;
           } else if (amount > rejectDays) {
               newStatus = 'REJECTED';
@@ -179,7 +214,6 @@ const RequestController = {
           }
       }
 
-      // Ejecutar cambios
       if (newStatus !== 'PENDING') {
         await client.query('UPDATE requests SET status = $1 WHERE id = $2', [newStatus, id]);
 
@@ -192,7 +226,26 @@ const RequestController = {
       }
 
       await client.query('COMMIT');
-      res.json({ success: true, status: newStatus, message: reason });
+
+      // ** ENVÍO DE NOTIFICACIÓN POR EMAIL **
+      if (newStatus !== 'PENDING') {
+        if (request.user_email) {
+            console.log(`📨 (Auto) Enviando correo a ${request.user_email}...`);
+            EmailService.sendStatusNotification(
+                request.user_email,
+                request.user_name,
+                request.type,
+                newStatus,
+                reason
+            ).catch(err => console.error("❌ Error enviando email en background:", err));
+        } else {
+            console.warn(`⚠️ (Auto) Usuario sin email. No se envió notificación.`);
+        }
+      }
+
+      console.log(`--- FIN AUTO-PROCESO: ${newStatus} ---\n`);
+      
+      res.json({ success: true, status: newStatus, message: reason, sentTo: request.user_email});
 
     } catch (error) {
       await client.query('ROLLBACK');
@@ -215,7 +268,7 @@ const RequestController = {
   updateSystemConfig: async (req, res) => {
     try {
       const { key } = req.params;
-      const { value } = req.body; // El Admin envía el nuevo valor
+      const { value } = req.body;
       
       await pool.query('UPDATE system_config SET value = $1 WHERE key = $2', [value, key]);
       res.json({ success: true, message: 'Regla actualizada correctamente' });

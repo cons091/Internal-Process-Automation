@@ -52,7 +52,7 @@ const login = async (req, res) => {
       { 
         id: user.id, 
         role: user.role || 'USER',
-        name: user.name // <--- AGREGA ESTO
+        name: user.name
       },
       process.env.JWT_SECRET || 'secreto_temporal',
       { expiresIn: '8h' }

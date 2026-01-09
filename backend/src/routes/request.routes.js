@@ -1,26 +1,24 @@
 const express = require('express');
 const router = express.Router();
 
-const RequestController = require('../controllers/requests.controller.js'); 
-const verifyToken = require('../middlewares/auth.middleware');
-const checkRole = require('../middlewares/role.middleware');
+const RequestController = require('../controllers/request.controller.js'); 
+const verifyToken = require('../middlewares/auth.middleware.js');
+const checkRole = require('../middlewares/role.middleware.js');
 
-// Todo lo que esté debajo de esta línea requiere un Token JWT válido.
 router.use(verifyToken);
 
 // ** RUTAS GENERALES ** (Cualquier usuario logueado)
-// Crear nueva solicitud
+// CREAR NUEVA SOLICITUD
 router.post('/', RequestController.createRequest || RequestController.create); 
 
-// Listar solicitudes
+// LISTAR SOLICITUDES
 router.get('/', RequestController.getRequests || RequestController.getAll);
 
-// Ver historial de una solicitud
+// VVER HISTORIAL DE UNA SOLICITUD
 router.get('/:id/history', RequestController.getRequestHistory || RequestController.getHistory);
 
 // ** RUTAS ADMIN **
-
-// Aprobar o Rechazar solicitud
+// APROBAR O RECHAZAR SOLICITUD
 router.put('/:id/status', checkRole('ADMIN'), RequestController.updateStatus);
 
 
@@ -30,8 +28,8 @@ router.post('/:id/auto-process', RequestController.processRequestAutomatic || Re
 module.exports = router;
 
 // ** RUTAS DE CONFIGURACIÓN DEL SISTEMA **
-// GET: Para mostrar las reglas en el modal
+// GET: PARA OBTENER LA CONFIGURACIÓN ACTUAL
 router.get('/system/config', checkRole('ADMIN'), RequestController.getSystemConfig);
 
-// PUT: Para guardar cambios en una regla específica
+// PUT: PARA GUARDAR NUEVA CONFIGURACIÓN
 router.put('/system/config/:key', checkRole('ADMIN'), RequestController.updateSystemConfig);

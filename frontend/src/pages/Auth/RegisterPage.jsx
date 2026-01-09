@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../../services/auth.service';
+import { showSuccessToast, showErrorToast } from '../../utils/alerts';
 
 const RegisterPage = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -13,12 +14,17 @@ const RegisterPage = () => {
       setServerError('');
       await authService.register(data);
       
-      alert('Cuenta creada con éxito. Por favor inicia sesión.');
+      showSuccessToast('¡Cuenta creada con éxito! Redirigiendo...');
       
-      navigate('/login');
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
+
     } catch (error) {
       console.error(error);
       setServerError(error.response?.data?.message || 'Error al registrarse');
+
+      setServerError(errorMSG);
     }
   };
 

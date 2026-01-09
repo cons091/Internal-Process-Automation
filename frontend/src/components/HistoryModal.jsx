@@ -20,7 +20,6 @@ const HistoryModal = ({ requestId, onClose }) => {
     if (requestId) fetchHistory();
   }, [requestId]);
 
-  // Helper para colores de estado
   const getStatusColor = (status) => {
     switch (status) {
       case 'APPROVED': return 'text-green-600 bg-green-100';
@@ -49,10 +48,8 @@ const HistoryModal = ({ requestId, onClose }) => {
               {history.map((item) => (
                 <div key={item.id} className="mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
                   
-                  {/* 1. Fila Superior: Cambio de Estado */}
                   <div className="flex justify-between items-center mb-2">
                     <div className="flex items-center flex-wrap gap-2">
-                      {/* Si existe estado previo, lo mostramos tachado */}
                       {item.previous_status && (
                         <>
                           <span className="text-xs font-semibold text-gray-400 line-through">
@@ -61,19 +58,16 @@ const HistoryModal = ({ requestId, onClose }) => {
                           <span className="text-gray-400">➜</span>
                         </>
                       )}
-                      {/* Estado Nuevo con color dinámico */}
                       <span className={`text-xs font-bold px-2 py-1 rounded uppercase ${getStatusColor(item.status)}`}>
                         {item.status}
                       </span>
                     </div>
                     
-                    {/* 2. Fecha Arreglada (Validamos que exista antes de formatear) */}
                     <span className="text-xs text-gray-500">
                       {item.changed_at ? new Date(item.changed_at).toLocaleString() : ''}
                     </span>
                   </div>
 
-                  {/* 3. Fila Inferior: Usuario y Rol */}
                   <div className="text-sm text-gray-600 border-t pt-2 mt-2 flex justify-between items-center">
                     <div>
                       <span className="text-gray-400 text-xs block">Modificado por:</span>

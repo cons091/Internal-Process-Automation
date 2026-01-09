@@ -7,14 +7,8 @@ const ProtectedRoute = ({ allowedRoles }) => {
   if (loading) return <div>Verificando sesión...</div>;
 
   if (!isAuthenticated) {
-    console.log("⛔ No autenticado, redirigiendo a login");
     return <Navigate to="/login" replace />;
   }
-
-  // DEBUG: Ver qué datos tiene el usuario
-  console.log("👤 Usuario actual:", user);
-  console.log("🔑 Rol del usuario:", user?.role);
-  console.log("🛡️ Roles permitidos:", allowedRoles);
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     console.warn(`⛔ Acceso denegado. Rol ${user.role} no está en [${allowedRoles}]`);

@@ -10,8 +10,11 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedRequestId, setSelectedRequestId] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
   
-  // Paginación
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const limit = 5;
@@ -20,7 +23,7 @@ const UserDashboard = () => {
     const fetchRequests = async () => {
       setLoading(true);
       try {
-        const response = await requestService.getAll(page, limit);
+        const response = await requestService.getAll(page, limit, searchTerm, statusFilter, typeFilter);
 
         if (response.pagination) {
           setRequests(response.data);
@@ -38,14 +41,19 @@ const UserDashboard = () => {
       }
     };
 
-    fetchRequests();
-  }, [page]);
+    const delayDebounce = setTimeout(() => {
+      fetchRequests();
+    }, 500);
+
+    return () => clearTimeout(delayDebounce);
+    
+  }, [page, searchTerm, statusFilter, typeFilter]);
 
   const handlePrev = () => setPage(p => Math.max(1, p - 1));
   const handleNext = () => setPage(p => Math.min(totalPages, p + 1));
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8"> {/* Fondo cambiado a gray-100 para consistencia */}
+    <div className="min-h-screen bg-gray-100 p-8">
 
       {/* MODAL */}
       {selectedRequestId && (
@@ -57,7 +65,7 @@ const UserDashboard = () => {
 
       <div className="max-w-7xl mx-auto">
         
-        {/* HEADER - Estilo Admin pero en Azul */}
+        {/* HEADER */}
         <div className="bg-white p-6 rounded-lg shadow-sm mb-6 flex justify-between items-center border-l-4 border-blue-600">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Panel de Control</h1>
@@ -80,7 +88,48 @@ const UserDashboard = () => {
             </button>
           </div>
         </div>
+        {/* BARRA DE FILTROS */}
+        <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+          <div className="flex-1 min-w-[200px]">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Buscar</label>
+            <input
+              type="text"
+              placeholder="Ej: ID, Descripción..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+            />
+          </div>
+          
+          <div className="w-40">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Estado</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+            >
+              <option value="">Todos</option>
+              <option value="PENDING">Pendiente</option>
+              <option value="APPROVED">Aprobada</option>
+              <option value="REJECTED">Rechazada</option>
+            </select>
+          </div>
 
+          <div className="w-40">
+            <label className="block text-xs font-medium text-gray-700 mb-1">Tipo</label>
+            <select
+              value={typeFilter}
+              onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
+              className="w-full border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+            >
+              <option value="">Todos</option>
+              <option value="VACATION">Vacaciones</option>
+              <option value="SICK_LEAVE">Licencia Médica</option>
+              <option value="EXPENSES">Gastos</option>
+              <option value="TI">Equipamiento TI</option>
+            </select>
+          </div>
+        </div>
         {/* TABLA */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {/* Header Tabla */}
@@ -90,7 +139,7 @@ const UserDashboard = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
-              {/* THEAD: Estilo compacto (text-xs) igual al admin */}
+              {/* THEAD */}
               <thead className="bg-gray-50 text-gray-600 text-xs uppercase font-semibold">
                 <tr>
                   <th className="p-4 border-b">ID</th>
@@ -142,7 +191,6 @@ const UserDashboard = () => {
                         {new Date(req.created_at).toLocaleDateString()}
                       </td>
                       <td className="p-4 text-center">
-                        {/* Botón Estilo Admin */}
                         <button
                           onClick={() => setSelectedRequestId(req.id)}
                           className="inline-flex items-center justify-center gap-1

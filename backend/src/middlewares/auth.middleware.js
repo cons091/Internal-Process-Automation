@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 
 const verifyToken = (req, res, next) => {
-  // 1. Obtener el token del header Authorization
+  // Obtener el token del header Authorization
   const authHeader = req.headers['authorization'];
 
   if (!authHeader) {
@@ -14,14 +14,12 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    // 2. Verificar el token
+    // Verificar el token
     const secret = process.env.JWT_SECRET || 'secreto_super_seguro_dev';
     const decoded = jwt.verify(token, secret);
-
-    // 3. Guardamos los datos del usuario en la request
+    
     req.user = decoded; 
     
-    // 4. Dejamos pasar a la siguiente función
     next(); 
   } catch (error) {
     return res.status(401).json({ message: 'Token inválido o expirado' });

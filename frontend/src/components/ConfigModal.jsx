@@ -4,9 +4,8 @@ import { requestService } from '../services/request.service';
 const ConfigModal = ({ onClose }) => {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [savingKey, setSavingKey] = useState(null); // Para mostrar carga en el botón específico
+  const [savingKey, setSavingKey] = useState(null);
 
-  // Cargar reglas al abrir
   useEffect(() => {
     const fetchConfig = async () => {
       try {
@@ -22,14 +21,12 @@ const ConfigModal = ({ onClose }) => {
     fetchConfig();
   }, []);
 
-  // Manejar cambio en los inputs (Estado local)
   const handleChange = (key, newValue) => {
     setConfigs(prev => prev.map(item => 
       item.key === key ? { ...item, value: newValue } : item
     ));
   };
 
-  // Guardar cambio en el Backend
   const handleSave = async (key, value) => {
     setSavingKey(key);
     try {

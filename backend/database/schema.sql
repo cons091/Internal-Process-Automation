@@ -1,5 +1,3 @@
--- Base de datos para solicitudes internas
-
 CREATE TABLE requests (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     type TEXT NOT NULL,

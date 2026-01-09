@@ -10,8 +10,9 @@ const RequestService = {
     return await RequestModel.create(data);
   },
 
-  getAllRequests: async (page, limit, userId = null) => {
-    return await RequestModel.findAll(page, limit, userId);
+  getAllRequests: async (page, limit, userId = null, search = null, status = null, type = null) => {
+    
+    return await RequestModel.findAll(page, limit, userId, search, status, type);
   },
 
   updateRequestStatus: async (id, newStatus, changedBy = 'system') => {

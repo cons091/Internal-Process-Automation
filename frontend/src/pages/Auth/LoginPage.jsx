@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import authService from '../../services/auth.service';
+import { showSuccessToast, showErrorToast } from '../../utils/alerts';
 
 const LoginPage = () => {
   const { register, handleSubmit, formState: { errors } } = useForm();
@@ -13,21 +14,26 @@ const LoginPage = () => {
   const onSubmit = async (data) => {
     try {
       setServerError('');
-      // Llamamos al Backend
       const response = await authService.login(data);
       
-      // Guardamos el token en el Contexto
       login(response.token);
+      showSuccessToast('¡Inicio de sesión exitoso!');
+      
 
-      // Redirigimos según el rol
-      if (response.user.role === 'ADMIN') {
-        navigate('/admin');
-      } else {
-        navigate('/user');
-      }
-    } catch (error) {
+      setTimeout(() => {
+          if (response.user.role === 'ADMIN') {
+            navigate('/admin');
+          } else {
+            navigate('/user');
+          }
+        }, 1500);
+      } catch (error) {
       console.error(error);
-      setServerError(error.response?.data?.message || 'Error al iniciar sesión');
+      const errorMsg = error.response?.data?.message || 'Error al iniciar sesión';
+
+      setServerError(errorMsg);
+      
+      showErrorToast(errorMsg);
     }
   };
 
