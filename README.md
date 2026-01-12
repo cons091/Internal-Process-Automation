@@ -1,168 +1,123 @@
 # Internal Process Automation System
 
-Sistema backend para gestionar, auditar y automatizar solicitudes internas, diseñado con enfoque empresarial y preparado para integrarse con herramientas de automatización como Power Automate.
+![Status](https://img.shields.io/badge/Status-Completed-success)
+![Stack](https://img.shields.io/badge/Stack-PERN-blue)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-Este proyecto demuestra lógica de negocio real, control de roles, auditoría y automatización de procesos, más allá de un CRUD básico.
+Sistema integral Full Stack para la gestión, auditoría y automatización de procesos corporativos. Simula un entorno empresarial real permitiendo a los empleados generar solicitudes y a los administradores gestionarlas mediante flujos de aprobación seguros.
 
-## Objetivo del Proyecto
+> **Evolución:** Este proyecto comenzó como una API Backend y evolucionó hacia una solución Full Stack completa, integrando seguridad con JWT, notificaciones por correo y una interfaz de usuario moderna.
 
-El objetivo es simular un sistema corporativo real para la gestión de procesos internos como:
+## 🚀 Características Principales
 
-- Solicitudes de vacaciones  
-- Solicitudes TI  
-- Aprobaciones administrativas  
+### 🔒 Seguridad y Autenticación
+* **Autenticación Real:** Implementación de **JWT (JSON Web Tokens)** para sesiones seguras.
+* **Encriptación:** Contraseñas hasheadas utilizando **bcryptjs**.
+* **Rutas Protegidas:** Sistema de navegación en Frontend que restringe el acceso según el rol (`ADMIN` o `USER`).
 
-El sistema:
+### 💻 Interfaz de Usuario (Frontend)
+* **Diseño Moderno:** Construido con **React + Vite** y estilizado con **Tailwind CSS**.
+* **Feedback Visual:** Notificaciones tipo "Toast" y modales elegantes usando **SweetAlert2**.
+* **Manejo de Errores:** Páginas de 404 personalizadas y mensajes de error amigables.
 
-- Controla estados  
-- Aplica reglas de negocio  
-- Registra auditoría completa  
-- Permite automatización de decisiones  
-- Restringe acciones críticas por rol  
+### ⚙️ Lógica de Negocio y Backend
+* **Gestión de Estados:** Flujo estricto de estados (`PENDING` -> `APPROVED` / `REJECTED`).
+* **Auditoría Completa:** Registro inmutable de quién cambió qué y cuándo (Trazabilidad).
+* **Automatización:** Endpoint inteligente que pre-aprueba solicitudes de bajo riesgo (ej: Soporte TI) y escala las críticas.
+* **Notificaciones:** Envío de correos electrónicos automáticos mediante **Nodemailer** (SMTP) al registrarse o cambiar estados.
 
-## Arquitectura
+## 🛠️ Stack Tecnológico
 
-Arquitectura en capas, siguiendo buenas prácticas de backend:
-Routes → Controllers → Services → Models → PostgreSQL
+**Frontend:**
+* React.js (Vite)
+* Tailwind CSS
+* React Router DOM
+* Axios (Interceptors & Async handling)
+* SweetAlert2
 
-Separación clara de responsabilidades, facilitando:
+**Backend:**
+* Node.js & Express.js
+* JSON Web Tokens (JWT)
+* Nodemailer (Servicio de Email)
+* PostgreSQL (Driver nativo `pg`)
+* Raw SQL (Consultas optimizadas sin ORM)
 
-- Mantenimiento  
-- Escalabilidad  
-- Testing  
-- Integración futura (JWT, SSO, Power Automate, etc.)
+## 📂 Arquitectura de Base de Datos
 
-## Stack Tecnológico
+El proyecto utiliza **PostgreSQL** con una arquitectura relacional sólida.
+Los scripts de creación (`schema.sql`) y datos de prueba (`seeds.sql`) se encuentran disponibles en la carpeta `/database` para facilitar la replicación del entorno.
 
-- Node.js  
-- Express  
-- PostgreSQL  
-- SQL (constraints y validaciones)  
-- dotenv  
-- Postman (testing de API)
+* **Users:** Almacena credenciales y roles.
+* **Requests:** Solicitudes generadas con reglas de negocio.
+* **Request_History:** Auditoría de cambios de estado.
 
-## Funcionalidades Principales
-
-### Gestión de Solicitudes
-
-- Crear solicitudes  
-- Listar solicitudes  
-
-Estados controlados:
-
-- PENDING  
-- APPROVED  
-- REJECTED  
-
-### Reglas de Negocio
-
-- Solo solicitudes en estado PENDING pueden cambiar de estado  
-- Estados validados tanto en backend como en base de datos  
-- Prevención de reprocesos automáticos  
-
-### Control de Roles
-
-Roles soportados:
-
-- ADMIN  
-- USER  
-
-Solo usuarios con rol ADMIN pueden:
-
-- Aprobar solicitudes  
-- Rechazar solicitudes  
-
-Implementado mediante middleware de autorización.
-
-### Auditoría de Cambios
-
-Cada cambio de estado queda registrado con:
-
-- Estado anterior  
-- Estado nuevo  
-- Usuario o sistema que realizó el cambio  
-- Fecha y hora  
-
-Endpoint dedicado:
-
-GET /api/requests/:id/history
-
-Esto permite trazabilidad completa, fundamental en entornos empresariales.
-
-### Automatización de Procesos
-
-El sistema incluye un endpoint de automatización que simula flujos empresariales similares a Power Automate:
-POST /api/requests/:id/auto-process
+## 📸 Capturas de Pantalla
 
 
-Reglas actuales:
+| Login | Dashboard Usuario | Dashboard Admin | Alertas SweetAlert |
+|:---:|:---:|:---:|:---:|
+| ![Login](/screenshots/login.png) | ![Dashboard](/screenshots/dash.png) | ![Alert](/screenshots/admin.png)| ![Alert](/screenshots/alert.png) |
 
-| Tipo de Solicitud | Resultado |
-|-------------------|----------|
-| TI                | Auto-aprobada |
-| Vacaciones        | Requiere aprobación manual |
+## 🔧 Instalación y Despliegue Local
 
-Las decisiones automáticas:
+Sigue estos pasos para correr el proyecto en tu máquina:
 
-- Se auditan  
-- No requieren intervención humana  
-- Están diseñadas para ser disparadas por sistemas externos  
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/cons091/Internal-Process-Automation.git
+cd Internal-Process-Automation
+```
 
-## Endpoints Principales
+### 2. Configurar Base de Datos
+Asegúrate de tener PostgreSQL instalado.
 
-Crear solicitud:
-POST /api/requests
+Crea una base de datos llamada process_db (o el nombre que prefieras).
 
-Listar solicitudes:
-GET /api/requests
+Ejecuta el script database/schema.sql para crear las tablas.
 
-Cambiar estado (solo ADMIN):
-PUT /api/requests/:id/status
+(Opcional) Ejecuta database/seeds.sql para tener usuarios de prueba.
 
+### 3. Configurar Backend
+```bash
+cd backend
+npm install
+```
 
-Headers requeridos:
-x-user-role: ADMIN
-Content-Type_ application/json
+Crea un archivo .env en la carpeta backend basado en:
+```bash
+PORT=3000
+DB_USER=tu_usuario
+DB_PASSWORD=tu_password
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=process_db
+JWT_SECRET=tu_secreto_super_seguro
+EMAIL_USER=tu_correo@gmail.com
+EMAIL_PASS=tu_contraseña_de_aplicacion
+```
 
-Ver historial de cambios:
-GET /api/requests/:id/history
+Ejecuta el servidor:
+```bash
+npm run dev
+```
+### 4. Configurar Frontend
+En una nueva terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Abre el navegador en la URL que te indique Vite
 
-Automatizar decisión:
-POST /api/requests/:id/auto-process
+# Testing
+Se realizaron pruebas manuales exhaustivas y pruebas de API utilizando Postman para validar:
 
-
-## Testing
-
-Las pruebas fueron realizadas utilizando Postman, validando:
-
-- Reglas de negocio  
-- Control de roles  
-- Automatización  
-- Auditoría  
-
-## Posibles Mejoras Futuras
-
-- Autenticación con JWT  
-- Tabla de usuarios y roles persistentes  
-- Integración real con Power Automate / Webhooks  
-- Frontend (React / Flutter)  
-- Notificaciones por email  
-
-## Valor Profesional del Proyecto
-
-Este proyecto demuestra:
-
-- Pensamiento orientado a procesos empresariales  
-- Backend estructurado y escalable  
-- Automatización real  
-- Control de acceso  
-- Auditoría completa  
-- Buen diseño de API  
-
-Ideal como proyecto de portafolio profesional.
+* Flujos de autenticación (Login/Register).
+* Protección de endpoints (Tokens inválidos/expirados).
+* Reglas de negocio (Un usuario no puede aprobar su propia solicitud).
 
 ## Autor
-
-Constanza Vergara  
-Backend Developer  
-Node.js · PostgreSQL · Automatización de procesos
+### Constanza Vergara  
+* Full Stack Developer
+* Linkedin: https://www.linkedin.com/in/constanza-may-vergara-spencer-6008343a5/
+* GitHub: https://github.com/cons091
