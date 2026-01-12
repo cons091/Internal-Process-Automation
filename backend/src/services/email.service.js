@@ -37,12 +37,9 @@ const EmailService = {
         subject: subject,
         html: htmlContent
       });
-
-      console.log(`📧 Correo enviado a ${toEmail}`);
       return true;
 
     } catch (error) {
-      console.error('❌ Error enviando correo:', error);
       return false;
     }
   }

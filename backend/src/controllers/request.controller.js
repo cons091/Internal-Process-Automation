@@ -59,9 +59,6 @@ const RequestController = {
       const { status } = req.body; 
       const changedBy = req.user.id;
 
-      console.log(`\n--- 🛠 INICIANDO CAMBIO MANUAL ---`);
-      console.log(`📝 ID Solicitud: ${id} | Nuevo Estado: ${status}`);
-
       if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
         return res.status(400).json({ error: "Estado inválido" });
       }
@@ -69,18 +66,13 @@ const RequestController = {
       const requestData = await RequestModel.findById(id);
       
       if (!requestData) {
-        console.log("❌ Error: Solicitud no encontrada en DB");
         return res.status(404).json({ error: "Solicitud no encontrada" });
       }
-
-      console.log(`👤 Usuario dueño de la solicitud: ${requestData.user_name}`);
-      console.log(`📧 EMAIL ENCONTRADO: [ ${requestData.user_email} ]`);
 
       const updated = await RequestModel.updateStatus(id, status, changedBy, "Cambio manual por Admin");
       
       if (status !== 'PENDING') {
          if (requestData.user_email) {
-            console.log(`📨 Enviando correo a ${requestData.user_email}...`);
             
             await EmailService.sendStatusNotification(
                 requestData.user_email,
@@ -89,13 +81,9 @@ const RequestController = {
                 status,
                 "Revisión manual administrativa."
             );
-            console.log(`✅ ¡Correo enviado exitosamente!`);
-         } else {
-            console.log(`⚠️ ALERTA: El usuario NO tiene email registrado. No se envió nada.`);
          }
       }
 
-      console.log(`--- FIN DEL PROCESO ---\n`);
       res.json(updated);
 
     } catch (error) {
@@ -137,7 +125,6 @@ const RequestController = {
     const { id } = req.params;
     const client = await pool.connect();
 
-    console.log(`\n--- 🤖 INICIANDO AUTO-PROCESO ID: ${id} ---`);
 
     try {
       await client.query('BEGIN');
@@ -158,8 +145,6 @@ const RequestController = {
       
       const request = requestResult.rows[0];
       
-      console.log(`🔎 Datos recuperados: Monto=${request.amount}, Email=${request.user_email}`);
-
       if (request.status !== 'PENDING') {
         await client.query('ROLLBACK');
         return res.status(400).json({ message: 'La solicitud ya fue procesada anteriormente.' });
@@ -230,7 +215,6 @@ const RequestController = {
       // ** ENVÍO DE NOTIFICACIÓN POR EMAIL **
       if (newStatus !== 'PENDING') {
         if (request.user_email) {
-            console.log(`📨 (Auto) Enviando correo a ${request.user_email}...`);
             EmailService.sendStatusNotification(
                 request.user_email,
                 request.user_name,
@@ -242,8 +226,6 @@ const RequestController = {
             console.warn(`⚠️ (Auto) Usuario sin email. No se envió notificación.`);
         }
       }
-
-      console.log(`--- FIN AUTO-PROCESO: ${newStatus} ---\n`);
       
       res.json({ success: true, status: newStatus, message: reason, sentTo: request.user_email});
 
