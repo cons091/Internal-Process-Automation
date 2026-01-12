@@ -119,5 +119,6 @@ Se realizaron pruebas manuales exhaustivas y pruebas de API utilizando Postman p
 ## Autor
 ### Constanza Vergara  
 * Full Stack Developer
-* Linkedin: https://www.linkedin.com/in/constanza-may-vergara-spencer-6008343a5/
+* Linkedin: https://www.linkedin.com/in/constanza-vergara-spencer/
+
 * GitHub: https://github.com/cons091
