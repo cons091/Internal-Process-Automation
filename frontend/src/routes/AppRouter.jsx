@@ -1,16 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
-
 import LoginPage from '../pages/Auth/LoginPage';
 import RegisterPage from '../pages/Auth/RegisterPage';
 import UserDashboard from '../pages/User/UserDashboard';
 import CreateRequest from '../pages/User/CreateRequest';
 import AdminDashboard from '../pages/Admin/AdminDashboard';
-
-// --- PLACEHOLDERS (Componentes temporales para evitar que la app se rompa) ---
-// Una vez crees los archivos reales en /pages, borra esto y haz los imports arriba.
-const NotFound = () => <div className="p-10"><h1>404 - Página no encontrada</h1></div>;
-// --------------------------------------------------------------------------
+import NotFoundPage from '../pages/NotFoundPage'; // <--- Importamos el nuevo archivo
 
 const AppRouter = () => {
   return (
@@ -32,7 +27,9 @@ const AppRouter = () => {
 
       {/* Redirección por defecto */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<NotFound />} />
+      
+      {/* Ruta 404 para cualquier URL desconocida */}
+      <Route path="*" element={<NotFoundPage />} /> 
     </Routes>
   );
 };
